@@ -1,0 +1,720 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#10162b">
+<meta name="description" content="Réflexe Flash : teste tes réflexes, enchaîne les combos et bats ton record !">
+<title>Réflexe Flash 2.0</title>
+
+<style>
+:root {
+  --bg: #10162b;
+  --panel: #1a2340;
+  --text: #f6f7ff;
+  --muted: #aab4d6;
+  --cyan: #53e3ff;
+  --lime: #b7ff65;
+  --pink: #ff65c8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top)) 14px
+           max(16px, env(safe-area-inset-bottom));
+  display: flex;
+  justify-content: center;
+  background: radial-gradient(circle at top, #273663, var(--bg) 65%);
+  color: var(--text);
+  font-family: system-ui, Arial, sans-serif;
+}
+
+button { font: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+
+.app {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+header { text-align: center; padding: 5px 0; }
+
+.kicker {
+  color: var(--cyan);
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 7px 0;
+  font-size: clamp(31px, 9vw, 46px);
+  line-height: 1.1;
+  letter-spacing: -1.5px;
+}
+
+.subtitle { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.stat {
+  min-width: 0;
+  background: #ffffff0c;
+  border: 1px solid #ffffff18;
+  border-radius: 15px;
+  padding: 10px 4px;
+  text-align: center;
+}
+
+.stat span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.stat strong {
+  display: block;
+  margin-top: 4px;
+  font-size: clamp(21px, 6vw, 27px);
+  font-variant-numeric: tabular-nums;
+}
+
+.arena {
+  position: relative;
+  height: clamp(280px, 39dvh, 390px);
+  min-height: 280px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid #ffffff25;
+  border-radius: 23px;
+  background: radial-gradient(circle at 50% 50%, #25345c, #11182f);
+  box-shadow: 0 18px 50px #0003;
+  touch-action: manipulation;
+}
+
+.arena::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(#ffffff16 1px, transparent 1px);
+  background-size: 22px 22px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.arena.pulse { animation: arenaPulse .18s ease-out; }
+
+@keyframes arenaPulse {
+  50% { box-shadow: inset 0 0 35px #53e3ff35, 0 0 18px #53e3ff25; }
+}
+
+#target {
+  position: absolute;
+  display: none;
+  width: 70px;
+  height: 70px;
+  padding: 0;
+  border: 3px solid #ffffffa0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 28%, white 0 5%, var(--cyan) 10% 30%, #269bcf 78%);
+  box-shadow: 0 0 0 7px #53e3ff20, 0 0 28px #53e3ff80;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: width .12s, height .12s, filter .12s;
+  z-index: 2;
+}
+
+#target:active { filter: brightness(1.25); }
+
+#target.bonus {
+  background: radial-gradient(circle at 35% 28%, white 0 5%, #ffe56b 12% 32%, #ff8b31 80%);
+  box-shadow: 0 0 0 8px #ffe56b25, 0 0 35px #ffb52e;
+  border-color: #fff4bc;
+}
+
+#target.pop { animation: targetPop .16s ease-out; }
+
+@keyframes targetPop {
+  50% { filter: brightness(1.7); }
+}
+
+.center-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  line-height: 1.65;
+  pointer-events: none;
+}
+
+.center-message strong {
+  display: block;
+  color: var(--text);
+  font-size: 21px;
+  margin-bottom: 7px;
+}
+
+.hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffffffbc;
+}
+
+.hud span {
+  padding: 6px 9px;
+  border-radius: 99px;
+  background: #080e22a8;
+}
+
+.float-score {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  color: var(--lime);
+  font-size: 22px;
+  font-weight: 1000;
+  pointer-events: none;
+  text-shadow: 0 2px 12px #0008;
+  animation: floatUp .65s ease-out forwards;
+}
+
+@keyframes floatUp {
+  to { opacity: 0; transform: translate(-50%, -100px) scale(1.3); }
+}
+
+.result {
+  min-height: 22px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--lime);
+}
+
+.mini-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.mini {
+  background: #ffffff08;
+  border: 1px solid #ffffff12;
+  border-radius: 13px;
+  padding: 9px 4px;
+  text-align: center;
+}
+
+.mini span {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.mini strong { display: block; margin-top: 4px; font-size: 16px; }
+
+.controls { display: flex; gap: 9px; }
+
+.primary {
+  flex: 1;
+  min-width: 0;
+  padding: 15px 10px;
+  border: 0;
+  border-radius: 15px;
+  background: linear-gradient(100deg, var(--cyan), #8bffcb);
+  color: #09152b;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: 0 5px 20px #53e3ff16;
+}
+
+.primary:disabled { opacity: .7; cursor: default; }
+
+.secondary {
+  min-width: 50px;
+  padding: 12px;
+  border: 1px solid #ffffff25;
+  border-radius: 15px;
+  background: #ffffff0b;
+  color: white;
+  font-weight: 800;
+}
+
+.tip {
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: #ffffff08;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+footer {
+  color: #8490b4;
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+</head>
+
+<body>
+<main class="app">
+  <header>
+    <div class="kicker">Arcade réflexe • Version 2.0</div>
+    <h1>RÉFLEXE <span style="color:var(--cyan)">FLASH</span></h1>
+    <p class="subtitle">30 secondes. Des combos. Un seul objectif : battre ton record !</p>
+  </header>
+
+  <section class="stats" aria-label="Statistiques de la partie">
+    <div class="stat"><span>Score</span><strong id="score">0</strong></div>
+    <div class="stat"><span>Temps</span><strong id="time">30</strong></div>
+    <div class="stat"><span>Record</span><strong id="best">0</strong></div>
+  </section>
+
+  <section class="arena" id="arena" aria-label="Zone de jeu">
+    <div class="hud">
+      <span id="level">NIVEAU 1</span>
+      <span id="combo">COMBO ×1</span>
+    </div>
+
+    <button id="target" aria-label="Toucher la cible"></button>
+
+    <div class="center-message" id="message">
+      <div>
+        <strong>Prêt pour le défi ?</strong>
+        Touche la cible le plus vite possible.<br>
+        Attention : elle devient plus petite !
+      </div>
+    </div>
+  </section>
+
+  <div class="result" id="result" aria-live="polite">
+    Chaque touche rapporte des points.
+  </div>
+
+  <section class="mini-stats" aria-label="Performances">
+    <div class="mini"><span>Précision</span><strong id="accuracy">—</strong></div>
+    <div class="mini"><span>Touchées</span><strong id="hits">0</strong></div>
+    <div class="mini"><span>Meilleur combo</span><strong id="bestCombo">0</strong></div>
+  </section>
+
+  <div class="controls">
+    <button class="primary" id="start">▶ JOUER</button>
+    <button class="secondary" id="sound" aria-label="Activer ou couper le son" title="Son">🔊</button>
+    <button class="secondary" id="reset" aria-label="Réinitialiser la partie" title="Réinitialiser">↻</button>
+  </div>
+
+  <div class="tip">
+    💡 Enchaîne les touches pour augmenter ton combo.
+    Les cibles dorées valent 3 points de base !
+  </div>
+
+  <footer>
+    Réflexe Flash 2.0 · Gratuit · Progression enregistrée sur cet appareil.
+  </footer>
+</main>
+
+<script>
+(() => {
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  const arena = $("arena");
+  const target = $("target");
+  const message = $("message");
+  const scoreEl = $("score");
+  const timeEl = $("time");
+  const bestEl = $("best");
+  const startBtn = $("start");
+  const resetBtn = $("reset");
+  const soundBtn = $("sound");
+  const resultEl = $("result");
+  const levelEl = $("level");
+  const comboEl = $("combo");
+  const accuracyEl = $("accuracy");
+  const hitsEl = $("hits");
+  const bestComboEl = $("bestCombo");
+
+  const GAME_LENGTH = 30;
+  const STORAGE_KEY = "reflexFlashV2";
+
+  let score = 0;
+  let timeLeft = GAME_LENGTH;
+  let playing = false;
+  let timer = null;
+  let deadline = 0;
+  let best = 0;
+  let hits = 0;
+  let misses = 0;
+  let combo = 0;
+  let bestCombo = 0;
+  let soundOn = true;
+  let audioContext = null;
+  let bonusTarget = false;
+  let lastTargetPosition = null;
+
+  function loadData() {
+    try {
+      const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+      best = Math.max(0, Number(data.best) || 0);
+      bestCombo = Math.max(0, Number(data.bestCombo) || 0);
+    } catch (e) {
+      best = 0;
+      bestCombo = 0;
+    }
+    bestEl.textContent = best;
+    bestComboEl.textContent = bestCombo;
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        best,
+        bestCombo
+      }));
+    } catch (e) {
+      // Le jeu reste jouable si le stockage n'est pas disponible.
+    }
+  }
+
+  function beep(frequency = 650, duration = 0.055, type = "sine") {
+    if (!soundOn) return;
+
+    try {
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) return;
+
+      if (!audioContext) audioContext = new Audio();
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch(() => {});
+      }
+
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+
+      oscillator.type = type;
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.07, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        0.001, audioContext.currentTime + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + duration);
+    } catch (e) {
+      // Le son est facultatif.
+    }
+  }
+
+  function getLevel() {
+    return Math.min(10, 1 + Math.floor(score / 8));
+  }
+
+  function getTargetSize() {
+    return Math.max(32, 70 - (getLevel() - 1) * 4);
+  }
+
+  function updateStats() {
+    scoreEl.textContent = score;
+    timeEl.textContent = timeLeft;
+    levelEl.textContent = "NIVEAU " + getLevel();
+    comboEl.textContent = "COMBO ×" + Math.max(1, combo);
+    hitsEl.textContent = hits;
+
+    const attempts = hits + misses;
+    accuracyEl.textContent = attempts
+      ? Math.round(hits / attempts * 100) + "%"
+      : "—";
+
+    bestComboEl.textContent = bestCombo;
+  }
+
+  function showFloat(text, x, y, color) {
+    const float = document.createElement("div");
+    float.className = "float-score";
+    float.textContent = text;
+    float.style.left = x + "px";
+    float.style.top = y + "px";
+
+    if (color) float.style.color = color;
+
+    arena.appendChild(float);
+    float.addEventListener("animationend", () => float.remove(), { once: true });
+  }
+
+  function placeTarget() {
+    if (!playing) return;
+
+    const rect = arena.getBoundingClientRect();
+    const size = getTargetSize();
+    const margin = size / 2 + 12;
+    const maxX = Math.max(margin, rect.width - margin);
+    const maxY = Math.max(margin + 28, rect.height - margin);
+
+    let x = margin + Math.random() * Math.max(0, maxX - margin);
+    let y = margin + Math.random() * Math.max(0, maxY - margin);
+
+    // Évite autant que possible de replacer la cible au même endroit.
+    if (lastTargetPosition && rect.width > size * 2) {
+      for (let i = 0; i < 5; i++) {
+        x = margin + Math.random() * Math.max(0, maxX - margin);
+        y = margin + Math.random() * Math.max(0, maxY - margin);
+
+        const dx = x - lastTargetPosition.x;
+        const dy = y - lastTargetPosition.y;
+
+        if (Math.hypot(dx, dy) > size * 1.4) break;
+      }
+    }
+
+    lastTargetPosition = { x, y };
+
+    target.style.width = size + "px";
+    target.style.height = size + "px";
+    target.style.left = x + "px";
+    target.style.top = y + "px";
+
+    bonusTarget = Math.random() < 0.13;
+    target.classList.toggle("bonus", bonusTarget);
+
+    target.style.display = "block";
+    target.classList.remove("pop");
+    void target.offsetWidth;
+    target.classList.add("pop");
+  }
+
+  function tick() {
+    if (!playing) return;
+
+    const remaining = Math.max(0, deadline - Date.now());
+    timeLeft = Math.ceil(remaining / 1000);
+    timeEl.textContent = timeLeft;
+
+    if (remaining <= 0) {
+      endGame();
+    }
+  }
+
+  function startGame() {
+    if (playing) return;
+
+    clearInterval(timer);
+
+    score = 0;
+    timeLeft = GAME_LENGTH;
+    hits = 0;
+    misses = 0;
+    combo = 0;
+    lastTargetPosition = null;
+    playing = true;
+    deadline = Date.now() + GAME_LENGTH * 1000;
+
+    resultEl.textContent = "C'est parti ! Enchaîne les touches !";
+    message.style.display = "none";
+    startBtn.disabled = true;
+    startBtn.textContent = "PARTIE EN COURS…";
+
+    updateStats();
+    placeTarget();
+    beep(520, 0.09);
+
+    timer = setInterval(tick, 100);
+  }
+
+  function endGame() {
+    if (!playing) return;
+
+    playing = false;
+    clearInterval(timer);
+    timer = null;
+
+    timeLeft = 0;
+    target.style.display = "none";
+    message.style.display = "flex";
+
+    const isRecord = score > best && score > 0;
+
+    if (isRecord) {
+      best = score;
+      bestEl.textContent = best;
+      resultEl.textContent = "🏆 NOUVEAU RECORD !";
+      beep(880, 0.12);
+      setTimeout(() => beep(1100, 0.16), 100);
+    } else {
+      resultEl.textContent = score >= 30
+        ? "🔥 Excellent ! Tu as de très bons réflexes !"
+        : score >= 15
+          ? "👏 Bien joué ! Tu progresses !"
+          : "💪 Encore un essai pour battre ton record !";
+      beep(420, 0.14);
+    }
+
+    message.innerHTML = `
+      <div>
+        <strong>${isRecord ? "🏆 Nouveau record !" : "⏱ Temps écoulé !"}</strong>
+        <div style="font-size:34px;font-weight:900;color:var(--cyan);margin:8px 0">
+          ${score} points
+        </div>
+        ${hits} cibles touchées · ${accuracyEl.textContent} de précision
+        <br>Meilleur combo : ×${bestCombo}
+        <br><br>Tente de faire encore mieux !
+      </div>
+    `;
+
+    startBtn.disabled = false;
+    startBtn.textContent = "↻ REJOUER";
+
+    saveData();
+    updateStats();
+  }
+
+  target.addEventListener("pointerdown", event => {
+    event.preventDefault();
+
+    if (!playing) return;
+
+    const rect = arena.getBoundingClientRect();
+    const x = parseFloat(target.style.left);
+    const y = parseFloat(target.style.top);
+
+    hits++;
+    combo++;
+    bestCombo = Math.max(bestCombo, combo);
+
+    const basePoints = bonusTarget ? 3 : 1;
+    const comboBonus = Math.floor(combo / 5);
+    const points = basePoints + comboBonus;
+
+    score += points;
+
+    showFloat(
+      "+" + points + (combo >= 5 ? " 🔥" : ""),
+      x,
+      y,
+      bonusTarget ? "#ffe56b" : "#b7ff65"
+    );
+
+    if (combo > 0 && combo % 5 === 0) {
+      resultEl.textContent = "🔥 Combo ×" + combo + " ! Continue !";
+      beep(850, 0.08, "triangle");
+    } else if (bonusTarget) {
+      resultEl.textContent = "✨ Cible bonus ! +" + points + " points";
+      beep(1000, 0.08, "sine");
+    } else {
+      beep(Math.min(950, 550 + combo * 12), 0.045);
+    }
+
+    arena.classList.remove("pulse");
+    void arena.offsetWidth;
+    arena.classList.add("pulse");
+
+    updateStats();
+    saveData();
+    placeTarget();
+  });
+
+  // Toucher une zone vide casse le combo.
+  arena.addEventListener("pointerdown", event => {
+    if (!playing || event.target === target) return;
+    if (event.target.closest(".hud")) return;
+
+    misses++;
+    combo = 0;
+    resultEl.textContent = "Oups ! Combo perdu. Continue !";
+    updateStats();
+    beep(210, 0.07, "triangle");
+  });
+
+  startBtn.addEventListener("click", startGame);
+
+  resetBtn.addEventListener("click", () => {
+    clearInterval(timer);
+    timer = null;
+    playing = false;
+
+    score = 0;
+    timeLeft = GAME_LENGTH;
+    hits = 0;
+    misses = 0;
+    combo = 0;
+    lastTargetPosition = null;
+
+    target.style.display = "none";
+    message.style.display = "flex";
+    message.innerHTML = `
+      <div>
+        <strong>Prêt pour le défi ?</strong>
+        Touche la cible le plus vite possible.<br>
+        Attention : elle devient plus petite !
+      </div>
+    `;
+
+    resultEl.textContent = "Chaque touche rapporte des points.";
+    startBtn.disabled = false;
+    startBtn.textContent = "▶ JOUER";
+
+    updateStats();
+  });
+
+  soundBtn.addEventListener("click", () => {
+    soundOn = !soundOn;
+    soundBtn.textContent = soundOn ? "🔊" : "🔇";
+    soundBtn.setAttribute(
+      "aria-label",
+      soundOn ? "Couper le son" : "Activer le son"
+    );
+
+    if (soundOn) beep(700, 0.08);
+  });
+
+  // Recalculer le placement si l'écran change de taille.
+  window.addEventListener("resize", () => {
+    if (playing) placeTarget();
+  });
+
+  loadData();
+  updateStats();
+})();
+</script>
+</body>
+</html>
